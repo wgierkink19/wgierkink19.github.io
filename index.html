@@ -87,7 +87,8 @@
   @keyframes blink { 50% { opacity: 0; } }
 
   /* Primary row */
-  .primary { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; }
+  .primary { display: grid; grid-template-columns: 1fr auto 1fr; grid-template-areas: 'globe clock wx'; gap: 10px; }
+  .left { grid-area: globe; } .clock { grid-area: clock; } .wx { grid-area: wx; }
   .left { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; padding: 10px 18px; container-type: inline-size; }
   .left .dtg { white-space: nowrap; }
   .astro { display: none; border-left: 1px solid var(--faint); padding-left: 26px; }
@@ -95,7 +96,7 @@
   .ybar { height: 4px; background: var(--faint); margin: -4px 0 10px; position: relative; width: 150px; }
   .ybar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--amber); box-shadow: var(--aglow); }
   @container (min-width: 740px) { .astro { display: block; } }
-  @container (min-width: 520px) and (max-width: 739px) {
+  @container (min-width: 400px) and (max-width: 739px) {
     .astro { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; width: 100%; border-left: none; border-top: 1px solid var(--faint); padding: 10px 0 0; }
   }
   canvas#globe { width: 190px; height: 190px; flex: none; }
@@ -109,8 +110,8 @@
   canvas#sky { width: 300px; max-width: 100%; height: 41px; margin-top: 6px; }
 
   /* Companion */
-  .pet { width: 184px; display: flex; flex-direction: column; align-items: center; user-select: none; }
-  canvas#pet { width: 184px; height: 132px; cursor: pointer; border-bottom: 1px solid var(--faint); }
+  .pet { width: 200px; display: flex; flex-direction: column; align-items: center; user-select: none; }
+  canvas#pet { width: 100%; height: 150px; cursor: pointer; border-bottom: 1px solid var(--faint); }
   .pet .name { font-size: 10px; letter-spacing: .3em; color: var(--mid); margin-top: 4px; cursor: text; }
   .pet .say { font-size: 11px; line-height: 1.35; color: var(--amber); text-shadow: 0 0 6px rgba(255,179,71,.45); text-align: center; min-height: 30px; margin-top: 3px; max-width: 184px; }
   .big { font-size: 76px; line-height: 1; letter-spacing: .05em; color: var(--bright); text-shadow: 0 0 16px rgba(127,220,255,.75); }
@@ -186,14 +187,25 @@
   #cities { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); column-gap: 30px; align-content: start; }
   @media (max-width: 1250px) {
     body { overflow: auto; }
-    header { grid-template-columns: auto 1fr auto; }
-    .primary { grid-template-columns: 1fr; }
-    .left, .clock { justify-content: center; }
+    header { grid-template-columns: auto minmax(0, 1fr) auto; }
+    form.search { min-width: 0; }
+    form.search .go { display: none; }
+    .primary { grid-template-columns: 1fr; grid-template-areas: 'clock' 'globe' 'wx'; }
+    .left { justify-content: space-evenly; }
+    .clock { justify-content: space-between; gap: 30px; padding: 12px 30px; }
+    .pet { flex: 1; width: auto; min-width: 200px; }
+    canvas#pet { height: 150px; }
     main { grid-template-columns: 1fr 1fr; }
     main section:last-child { grid-column: 1 / -1; }
     section { min-height: 440px; }
   }
+  @media (max-width: 1120px) { .sys { display: none; } }
+  @media (min-width: 1000px) and (max-width: 1250px) {
+    .primary { grid-template-columns: 1fr 1fr; grid-template-areas: 'clock clock' 'globe wx'; }
+  }
   @media (max-width: 760px) {
+    .clock { flex-direction: column; }
+    .pet { width: 100%; }
     header { grid-template-columns: 1fr; }
     .hright { justify-content: flex-start; flex-wrap: wrap; }
     main { grid-template-columns: 1fr; }
@@ -993,10 +1005,10 @@
 
   /* ---------- Companion: a Hague stork (with its eel) ---------- */
   const pc = $('pet'), px = pc.getContext('2d'), say = $('say'), nameEl = $('petname');
-  const PW = 184, PH = 132, GY = 112;
-  const NX = 160, NY = 52;            // nest on a pole
+  let PW = 184; const PH = 150, GY = 128;
+  let NX = 160; const NY = 62;          // nest on a pole
   const POND = [6, 52];               // ditch with eels
-  const MILL = 104;                   // little windmill
+  let MILL = 104;                     // little windmill
   pc.width = PW * DPR; pc.height = PH * DPR; px.scale(DPR, DPR);
 
   let petName = 'ZIB';
@@ -1043,13 +1055,13 @@
   function goTo(x, then) { pet.target = x; pet.then = then; pet.state = 'walk'; pet.face = x > pet.x ? 1 : -1; }
   function flyTo(x, y, loop, then) {
     const pts = [];
-    if (loop) { for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) pts.push([20 + Math.random() * 140, 14 + Math.random() * 26]); }
+    if (loop) { for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) pts.push([20 + Math.random() * (PW - 40), 14 + Math.random() * 30]); }
     else pts.push([(pet.x + x) / 2, Math.min(pet.y, y) - 22 - Math.random() * 14]);
     pts.push([x, y]);
     pet.path = pts; pet.then = then; pet.state = 'fly';
   }
   const toNest = (then) => flyTo(NX, NY, Math.random() < .5, () => { pet.loc = 'nest'; then ? then() : setState('nest', 4000); });
-  const toGround = (then) => flyTo(70 + Math.random() * 60, GY, Math.random() < .5, () => { pet.loc = 'ground'; then ? then() : setState('idle', 2500); });
+  const toGround = (then) => flyTo(70 + Math.random() * Math.max(30, NX - 110), GY, Math.random() < .5, () => { pet.loc = 'ground'; then ? then() : setState('idle', 2500); });
 
   function clatter(ms, msg) { setState('clatter', ms || 2200); if (msg !== false) speak(msg || 'KLEPPER-KLEPPER!'); }
 
@@ -1071,7 +1083,7 @@
       return;
     }
     if (f.rain && r < .3) { toNest(() => { setState('nest', 6000); speak('RAIN. GOOD FOR EELS.'); }); return; }
-    if (r < .22) goTo(64 + Math.random() * 72, () => setState('idle', 1500 + Math.random() * 2000));
+    if (r < .22) goTo(64 + Math.random() * Math.max(30, NX - 100), () => setState('idle', 1500 + Math.random() * 2000));
     else if (r < .40) setState('oneleg', 4000 + Math.random() * 4000);
     else if (r < .55) goTo(POND[1] + 10, () => { pet.face = -1; setState('fish', 4200); });
     else if (r < .67) clatter();
@@ -1101,6 +1113,36 @@
   // ---- drawing ----
   const LINE = 'rgba(127,220,255,.9)', BRIGHT = '#e6faff', AMBER = '#ffb347', BG = '#030b11', DARK = '#0a1820';
 
+  // cows: a Dutch meadow needs cows
+  const COWS = [{ f: .42, dir: 1, ph: 0 }, { f: .62, dir: -1, ph: 2 }];
+  function drawCow(c, t) {
+    const x = Math.round(PW * c.f) + Math.sin(t / 9000 + c.ph) * 8, y = GY - 1, d = c.dir;
+    const graze = Math.sin(t / 1300 + c.ph) > -.2;
+    px.save(); px.translate(x, y); px.scale(d, 1);
+    px.strokeStyle = 'rgba(230,250,255,.75)'; px.lineWidth = 1; px.fillStyle = BG;
+    px.beginPath(); px.rect(-8, -11, 15, 7); px.fill(); px.stroke();
+    px.fillStyle = 'rgba(127,220,255,.55)'; px.fillRect(-5, -10, 4, 3); px.fillRect(2, -9, 3, 3);
+    px.beginPath(); px.moveTo(-6, -4); px.lineTo(-6, 0); px.moveTo(-3, -4); px.lineTo(-3, 0); px.moveTo(3, -4); px.lineTo(3, 0); px.moveTo(6, -4); px.lineTo(6, 0); px.stroke();
+    px.beginPath(); px.moveTo(-8, -10); px.quadraticCurveTo(-11, -9, -10, -5); px.stroke();
+    const hy = graze ? -3 : -11;
+    px.fillStyle = BG; px.beginPath(); px.rect(7, hy - 2, 5, 4); px.fill(); px.stroke();
+    px.beginPath(); px.moveTo(8, hy - 2); px.lineTo(7, hy - 4); px.moveTo(11, hy - 2); px.lineTo(12, hy - 4); px.stroke();
+    px.restore();
+  }
+
+  function sizePet() {
+    const w = Math.round(pc.clientWidth) || 184;
+    if (w === PW) return;
+    const wasNest = pet.loc === 'nest';
+    PW = w; pc.width = PW * DPR; pc.height = PH * DPR; px.setTransform(DPR, 0, 0, DPR, 0, 0);
+    NX = PW - 26; MILL = Math.round(PW * .56);
+    STARS2.length = 0; for (let i = 0; i < Math.round(PW / 10); i++) STARS2.push([Math.random() * PW, Math.random() * 60 + 4, Math.random() * 6]);
+    if (wasNest && pet.state !== 'fly') pet.x = NX;
+    else pet.x = Math.min(pet.x, NX - 30);
+    if (pet.path) pet.path = pet.path.map(([x, y]) => [Math.min(x, PW - 10), y]);
+  }
+  if (window.ResizeObserver) new ResizeObserver(sizePet).observe(pc);
+
   function drawHabitat(t, f) {
     const night = isNight() || f.dark;
     if (night) {
@@ -1108,14 +1150,24 @@
       for (const [x, y, ph] of STARS2) { px.globalAlpha = .2 + .7 * Math.abs(Math.sin(t / 900 + ph)); px.fillRect(x, y, 1.2, 1.2); }
       px.globalAlpha = 1;
     }
-    // windmill in the distance
-    px.strokeStyle = 'rgba(127,220,255,.35)'; px.lineWidth = .9;
-    px.beginPath(); px.moveTo(MILL - 5, GY); px.lineTo(MILL - 3, GY - 20); px.lineTo(MILL + 3, GY - 20); px.lineTo(MILL + 5, GY); px.stroke();
-    px.beginPath(); px.moveTo(MILL - 4, GY - 20); px.lineTo(MILL, GY - 24); px.lineTo(MILL + 4, GY - 20); px.stroke();
+    // windmills in the distance (more of them when there's room)
     const spin = t / (f.windy ? 400 : 1400);
-    px.beginPath();
-    for (let i = 0; i < 4; i++) { const a = spin + i * Math.PI / 2; px.moveTo(MILL, GY - 21); px.lineTo(MILL + Math.cos(a) * 12, GY - 21 + Math.sin(a) * 12); }
-    px.stroke();
+    const mills = [[MILL, 1]];
+    if (PW > 320) mills.push([Math.round(PW * .3), .75]);
+    if (PW > 520) mills.push([Math.round(PW * .78), .6]);
+    for (const [mx, s] of mills) {
+      px.strokeStyle = 'rgba(127,220,255,' + (.2 + s * .15) + ')'; px.lineWidth = .9;
+      px.beginPath(); px.moveTo(mx - 5 * s, GY); px.lineTo(mx - 3 * s, GY - 20 * s); px.lineTo(mx + 3 * s, GY - 20 * s); px.lineTo(mx + 5 * s, GY); px.stroke();
+      px.beginPath(); px.moveTo(mx - 4 * s, GY - 20 * s); px.lineTo(mx, GY - 24 * s); px.lineTo(mx + 4 * s, GY - 20 * s); px.stroke();
+      px.beginPath();
+      for (let i = 0; i < 4; i++) { const a = spin * (1 + s * .2) + i * Math.PI / 2; px.moveTo(mx, GY - 21 * s); px.lineTo(mx + Math.cos(a) * 12 * s, GY - 21 * s + Math.sin(a) * 12 * s); }
+      px.stroke();
+    }
+    // a far-off dike line
+    px.strokeStyle = 'rgba(127,220,255,.15)'; px.setLineDash([6, 4]);
+    px.beginPath(); px.moveTo(POND[1] + 12, GY - 6); px.lineTo(NX - 22, GY - 6); px.stroke(); px.setLineDash([]);
+    // grazing cows when the meadow is wide enough
+    if (PW > 360) for (const cw of COWS) drawCow(cw, t);
 
     // ground + ditch
     px.strokeStyle = LINE; px.lineWidth = 1;
